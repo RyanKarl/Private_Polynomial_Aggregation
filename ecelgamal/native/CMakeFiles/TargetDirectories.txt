@@ -1,0 +1,5 @@
+/Users/ryankarl/GitRepos/ecelgamal/native/CMakeFiles/rebuild_cache.dir
+/Users/ryankarl/GitRepos/ecelgamal/native/CMakeFiles/edit_cache.dir
+/Users/ryankarl/GitRepos/ecelgamal/native/CMakeFiles/ecelgamal-jni-wrapper.dir
+/Users/ryankarl/GitRepos/ecelgamal/native/CMakeFiles/ecelgamal-lib.dir
+/Users/ryankarl/GitRepos/ecelgamal/native/CMakeFiles/ecelgamal.dir

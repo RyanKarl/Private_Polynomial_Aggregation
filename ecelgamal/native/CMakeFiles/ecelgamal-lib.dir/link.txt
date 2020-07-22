@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/cc  -O3 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk -dynamiclib -Wl,-headerpad_max_install_names  -o out/libecelgamal-lib.dylib -install_name @rpath/libecelgamal-lib.dylib CMakeFiles/ecelgamal-lib.dir/ecelgamal.c.o CMakeFiles/ecelgamal-lib.dir/crtecelgamal.c.o -lcrypto -lssl 
