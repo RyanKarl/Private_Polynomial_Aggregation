@@ -20,19 +20,26 @@
 #include <stdlib.h>
 #include <gmp.h>
 
+//This represents a, b, p for the curve y^2 = x^3 + ax + b over F_p
 struct Elliptic_Curve {
 	mpz_t a;
 	mpz_t b;
 	mpz_t p;
 };
 
+//This represents x, y for the curve y^2 = x^3 + ax + b over F_p
 struct Point {
 	mpz_t x;
 	mpz_t y;
 };
 
+//Global curve
 struct Elliptic_Curve EC;
 
+//This computes C = 2A, where P = A and R = C i.e.
+//x_C = s^2 – (2 * x_A) (mod p)
+//y_C = –y_A + s * (x_A – x_C) (mod p)
+//s = (3 * x_A^2 + a) / (2 * y_A) (mod p) where a is elliptic curve parameter
 void Point_Doubling(struct Point P, struct Point *R)
 {
 	mpz_t slope, temp;
@@ -40,22 +47,29 @@ void Point_Doubling(struct Point P, struct Point *R)
 	mpz_init(slope);
 	
 	if(mpz_cmp_ui(P.y, 0) != 0) {
-		mpz_mul_ui(temp, P.y, 2);
+
+		//s = (3 * x_A^2 + a) / (2 * y_A) (mod p)
+        mpz_mul_ui(temp, P.y, 2);
 		mpz_invert(temp, temp, EC.p);
 		mpz_mul(slope, P.x, P.x);
 		mpz_mul_ui(slope, slope, 3);
 		mpz_add(slope, slope, EC.a);
 		mpz_mul(slope, slope, temp);
 		mpz_mod(slope, slope, EC.p);
-		mpz_mul(R->x, slope, slope);
+		
+        //x_C = s^2 – (2 * x_A) (mod p)
+        mpz_mul(R->x, slope, slope);
 		mpz_sub(R->x, R->x, P.x);
 		mpz_sub(R->x, R->x, P.x);
 		mpz_mod(R->x, R->x, EC.p);
+
+        //y_C = –y_A + s * (x_A – x_C) (mod p)
 		mpz_sub(temp, P.x, R->x);
 		mpz_mul(R->y, slope, temp);
 		mpz_sub(R->y, R->y, P.y);
 		mpz_mod(R->y, R->y, EC.p);
-	} else {
+	} 
+    else { //if y_A = 0 then 2A = O, where O is the point at infinity
 		mpz_set_ui(R->x, 0);
 		mpz_set_ui(R->y, 0);
 	}
@@ -63,6 +77,10 @@ void Point_Doubling(struct Point P, struct Point *R)
 	mpz_clear(slope);
 }
 
+//This computes C = A + B, where P = A, Q = B, and R = C i.e.
+//x_C = s^2 – x_A – x_B (mod p)
+//y_C = –y_A + s * (x_A – x_C) (mod p)
+//s = (y_A – y_B) / (x_A – x_B) (mod p)
 void Point_Addition(struct Point P, struct Point Q, struct Point *R)
 {
 	mpz_mod(P.x, P.x, EC.p);
@@ -70,6 +88,7 @@ void Point_Addition(struct Point P, struct Point Q, struct Point *R)
 	mpz_mod(Q.x, Q.x, EC.p);
 	mpz_mod(Q.y, Q.y, EC.p);
 
+    //Quick return if a point is (0,0)
 	if(mpz_cmp_ui(P.x, 0) == 0 && mpz_cmp_ui(P.y, 0) == 0) {
 		mpz_set(R->x, Q.x);
 		mpz_set(R->y, Q.y);
@@ -85,6 +104,7 @@ void Point_Addition(struct Point P, struct Point Q, struct Point *R)
 	mpz_t temp;
 	mpz_init(temp);
 
+    //temp = p - y_B (mod p)
 	if(mpz_cmp_ui(Q.y, 0) != 0) { 
 		mpz_sub(temp, EC.p, Q.y);
 		mpz_mod(temp, temp, EC.p);
@@ -93,6 +113,7 @@ void Point_Addition(struct Point P, struct Point Q, struct Point *R)
 
 	//gmp_printf("\n temp=%Zd\n", temp);
 
+    //if B = –A i.e. B = (x_A, –y_A) (mod p) then A + B = O where O is the point at infinity (can't divide by 0)
 	if(mpz_cmp(P.y, temp) == 0 && mpz_cmp(P.x, Q.x) == 0) {
 		mpz_set_ui(R->x, 0);
 		mpz_set_ui(R->y, 0);
@@ -100,26 +121,34 @@ void Point_Addition(struct Point P, struct Point Q, struct Point *R)
 		return;
 	}
 	
+    //if B = A i.e. A + B = 2A then point doubling equations are used
 	if(mpz_cmp(P.x, Q.x) == 0 && mpz_cmp(P.y, Q.y) == 0)	{
 		Point_Doubling(P, R);
 		
 		mpz_clear(temp);
 		return;		
-	} else {
+	} 
+    else {
 		mpz_t slope;
 		mpz_init_set_ui(slope, 0);
 
-		mpz_sub(temp, P.x, Q.x);
+        //s = (y_A – y_B) / (x_A – x_B) (mod p)
+		//Note mpz_invert(x,a,m) returns an integer x where product of ax = 1 mod m
+        mpz_sub(temp, P.x, Q.x);
 		mpz_mod(temp, temp, EC.p);
 		mpz_invert(temp, temp, EC.p);
 		mpz_sub(slope, P.y, Q.y);
 		mpz_mul(slope, slope, temp);
 		mpz_mod(slope, slope, EC.p);
-		mpz_mul(R->x, slope, slope);
+		
+        //x_C = s^2 – x_A – x_B (mod p) 
+        mpz_mul(R->x, slope, slope);
 		mpz_sub(R->x, R->x, P.x);
 		mpz_sub(R->x, R->x, Q.x);
 		mpz_mod(R->x, R->x, EC.p);
-		mpz_sub(temp, P.x, R->x);
+		
+        //y_C = –y_A + s * (x_A – x_C) (mod p)
+        mpz_sub(temp, P.x, R->x);
 		mpz_mul(R->y, slope, temp);
 		mpz_sub(R->y, R->y, P.y);
 		mpz_mod(R->y, R->y, EC.p);
@@ -130,21 +159,31 @@ void Point_Addition(struct Point P, struct Point Q, struct Point *R)
 	}
 }
 
+//Implemented as adding P to itself m times and storing result in R
+//Uses "Double and Add method"
 void Scalar_Multiplication(struct Point P, struct Point *R, mpz_t m)
 {
 	struct Point Q, T;
-	mpz_init(Q.x); mpz_init(Q.y);
-	mpz_init(T.x); mpz_init(T.y);
+	mpz_init(Q.x); 
+    mpz_init(Q.y);
+	mpz_init(T.x); 
+    mpz_init(T.y);
 	long no_of_bits, loop;
 	
+    //Return the size of op (i.e. m) measured in number of digits in the base (i.e. 2)
 	no_of_bits = mpz_sizeinbase(m, 2);
 	mpz_set_ui(R->x, 0);
 	mpz_set_ui(R->y, 0);
 	if(mpz_cmp_ui(m, 0) == 0)
 		return;
-		
+	
+    //Assign Q = P
 	mpz_set(Q.x, P.x);
 	mpz_set(Q.y, P.y);
+
+    //Test bit at location (i.e. 0) in m and return 0 or 1 accordingly.
+    //Assign R = P if bit 0 in m equals 1
+    //gmp_printf("\nThis is m: %Zd \n", m);
 	if(mpz_tstbit(m, 0) == 1){
 		mpz_set(R->x, P.x);
 		mpz_set(R->y, P.y);
@@ -241,7 +280,8 @@ int main(int argc, char *argv[])
 	}
 	
 	/*	p = k x G == R = m x P	*/
-	Scalar_Multiplication(P, &R, m);
+	//Implemented as adding P to itself m times and storing result in R
+    Scalar_Multiplication(P, &R, m);
 	
 	mpz_out_str(stdout, 16, R.x); puts("");
 	mpz_out_str(stdout, 16, R.y); puts("");
