@@ -1,20 +1,3 @@
-/*
-	ec_gmp_p_mul.c
-	2014 masterzorag@gmail.com
-
-	entirely based on the gmplib implementation of elliptic curve scalar point 
-	available at http://researchtrend.net/ijet32/6%20KULDEEP%20BHARDWAJ.pdf
-
-	program sets curve domain parameters, an integer and a point to perform point 
-	smultiplication by scalar, computing the derived point
-
-	cryptographically speaking, it verifies private/public math correlation 
-
-	Pass a first arg to verify known R point for first curve
-	41da1a8f74ff8d3f1ce20ef3e9d8865c96014fe3
-	73ca143c9badedf2d9d3c7573307115ccfe04f13
-*/
-
 // Point at Infinity is Denoted by (0,0)
 #include <stdio.h>
 #include <stdlib.h>
@@ -207,8 +190,8 @@ void Scalar_Multiplication(struct Point P, struct Point *R, mpz_t m)
 	mpz_clear(T.x); mpz_clear(T.y);
 }		
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]){
+
 	mpz_init(EC.a); 
 	mpz_init(EC.b); 
 	mpz_init(EC.p);
@@ -218,24 +201,28 @@ int main(int argc, char *argv[])
 	mpz_init_set_ui(k_pubA.y, 0);
     mpz_init_set_ui(k_pubB.x, 0);
     mpz_init_set_ui(k_pubB.y, 0);
+    
     mpz_init_set_ui(joint_key_Alice.x, 0);
     mpz_init_set_ui(joint_key_Alice.y, 0);
     mpz_init_set_ui(joint_key_Bob.x, 0);
     mpz_init_set_ui(joint_key_Bob.y, 0);
-	mpz_init(P.x);
+	
+    mpz_init(P.x);
 	mpz_init(P.y);
 	
 	mpz_t private_key_Alice;
-	mpz_init_set_ui(private_key_Alice, 4);
+	mpz_init(private_key_Alice);
+    mpz_set_str(private_key_Alice, "0x4", 0);
+    
     mpz_t private_key_Bob;
-    mpz_init_set_ui(private_key_Bob, 7);
+    mpz_init(private_key_Bob);
+    mpz_set_str(private_key_Bob, "0x7", 0);
 
 	mpz_set_str(EC.p, "0x11", 0);
 	mpz_set_str(EC.a, "0x2", 0);
 	mpz_set_str(EC.b, "0x2", 0);
 	mpz_set_str(P.x, "0x5", 0);
 	mpz_set_str(P.y, "0x1", 0);
-	//mpz_set_str(m, "0x2", 0);
 		
 	//Elliptic Curve Diffie–Hellman Key Exchange (ECDH)
     //Public parameters: {p = 17, a = 2, b = 2, P = (5,1)}
@@ -254,12 +241,68 @@ int main(int argc, char *argv[])
 
     //Bob computes joint secret key
     Scalar_Multiplication(k_pubA, &joint_key_Bob, private_key_Bob);
-
+    
     //Verify joint keys are equal
-    if(mpz_cmp(joint_key_Alice.x, joint_key_Bob.x) == 0 && mpz_cmp(joint_key_Alice.y, joint_key_Alice.y) == 0){
+    //if(mpz_cmp(joint_key_Alice.x, joint_key_Bob.x) == 0 && mpz_cmp(joint_key_Alice.y, joint_key_Bob.y) == 0){
+        //printf("Keys are equal\n");
+    //}
+   
+        
 
-        printf("Keys are equal\n");
+    //Encryption Example
+    //Consider a message m = 9 sent from Alice to Bob. 
+    //Alice chooses a random positive integer k = 5, a private key private_key_Alice = 4, 
+    //and generates the public key k_pubA = private_key_Alice * P and produces 
+    //the ciphertext ‘enc_m’ consisting of pair of points enc_m={k * P, m + k * k_pubB} 
+    //where P = (5, 1) is the base point on the curve.
+    mpz_t m;
+    mpz_init(m);
+    mpz_set_str(m, "0x9", 0);
+    mpz_t k;
+    mpz_init(k);
+    mpz_set_str(m, "0x5", 0);
+    struct Point enc_m_1, enc_m_2;
+    mpz_init(enc_m_1.x);
+    mpz_init(enc_m_1.y);
+    mpz_init(enc_m_2.x);
+    mpz_init(enc_m_2.y);
+
+    //R=
+    Scalar_Multiplication(P, &enc_m_1, k);
+    struct Point tmp;
+    mpz_init(tmp.x);
+    mpz_init(tmp.y);
+
+    //M=
+    Scalar_Multiplication(P, &tmp, m);
+    
+    //k*Y
+    Scalar_Multiplication(k_pubB, &enc_m_2, k);
+    //S=
+    Point_Addition(tmp, enc_m_2, &enc_m_2);
+
+    
+
+    //Decryption Example
+    //To decrypt the ciphertext, Bob multiplies the 1st point in the pair enc_m by private_key_Bob and subtracts the result from the 2nd point as k * k_pubB - private_key_Bob * (k * P)  = m 
+    mpz_neg(private_key_Bob, private_key_Bob);
+    Scalar_Multiplication(enc_m_2, &tmp, private_key_Bob);
+    //M=
+    Point_Addition(enc_m_1, tmp, &tmp);
+  
+    int i = 0, j = 0;
+    while(i == 0){
+        if((mpz_cmp(tmp.x, P.x) == 0) && (mpz_cmp(tmp.y, P.y) == 0)){
+            i = 1;
+        }
+        else{
+            j++;
+            Point_Addition(P, P, &P);
+        }
     }
+
+    printf("Final Result %i\n", j);
+    
 
     /*	p = k x G == R = m x P	*/
 	//Implemented as adding P to itself m times and storing result in R
@@ -269,8 +312,8 @@ int main(int argc, char *argv[])
 	//mpz_out_str(stdout, 16, R.y); puts("");
 
 	// Free variables
-	mpz_clear(EC.a); mpz_clear(EC.b); mpz_clear(EC.p);
+	//mpz_clear(EC.a); mpz_clear(EC.b); mpz_clear(EC.p);
 	//mpz_clear(R.x); mpz_clear(R.y);
-	mpz_clear(P.x); mpz_clear(P.y);
+	//mpz_clear(P.x); mpz_clear(P.y);
 	//mpz_clear(m);
 }
