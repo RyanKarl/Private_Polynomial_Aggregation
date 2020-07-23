@@ -213,82 +213,64 @@ int main(int argc, char *argv[])
 	mpz_init(EC.b); 
 	mpz_init(EC.p);
 	
-	struct Point P, R;
-	mpz_init_set_ui(R.x, 0);
-	mpz_init_set_ui(R.y, 0);
+	struct Point P, k_pubA, k_pubB, joint_key_Alice, joint_key_Bob;
+	mpz_init_set_ui(k_pubA.x, 0);
+	mpz_init_set_ui(k_pubA.y, 0);
+    mpz_init_set_ui(k_pubB.x, 0);
+    mpz_init_set_ui(k_pubB.y, 0);
+    mpz_init_set_ui(joint_key_Alice.x, 0);
+    mpz_init_set_ui(joint_key_Alice.y, 0);
+    mpz_init_set_ui(joint_key_Bob.x, 0);
+    mpz_init_set_ui(joint_key_Bob.y, 0);
 	mpz_init(P.x);
 	mpz_init(P.y);
 	
-	mpz_t m;
-	mpz_init(m);
+	mpz_t private_key_Alice;
+	mpz_init_set_ui(private_key_Alice, 4);
+    mpz_t private_key_Bob;
+    mpz_init_set_ui(private_key_Bob, 7);
 
-	if(argv[1]){
-	/*
-		Valid test case
-		----------------
+	mpz_set_str(EC.p, "0x11", 0);
+	mpz_set_str(EC.a, "0x2", 0);
+	mpz_set_str(EC.b, "0x2", 0);
+	mpz_set_str(P.x, "0x5", 0);
+	mpz_set_str(P.y, "0x1", 0);
+	//mpz_set_str(m, "0x2", 0);
 		
-		Curve domain parameters:
-		p:	c1c627e1638fdc8e24299bb041e4e23af4bb5427
-		a:	c1c627e1638fdc8e24299bb041e4e23af4bb5424
-		b:	877a6d84155a1de374b72d9f9d93b36bb563b2ab		
-	*/
-		mpz_set_str(EC.p, "0xc1c627e1638fdc8e24299bb041e4e23af4bb5427", 0);
-		mpz_set_str(EC.a, "0xc1c627e1638fdc8e24299bb041e4e23af4bb5424", 0);
-		mpz_set_str(EC.b, "0x877a6d84155a1de374b72d9f9d93b36bb563b2ab", 0);
-	/*	
-		Base point:
-		Gx: 010aff82b3ac72569ae645af3b527be133442131
-		Gy: 46b8ec1e6d71e5ecb549614887d57a287df573cc
-	*/
-		mpz_set_str(P.x, "0x010aff82b3ac72569ae645af3b527be133442131", 0);
-		mpz_set_str(P.y, "0x46b8ec1e6d71e5ecb549614887d57a287df573cc", 0);
-	/*
-		known verified R point for first curve
-		R.x	41da1a8f74ff8d3f1ce20ef3e9d8865c96014fe3
-		R.y	73ca143c9badedf2d9d3c7573307115ccfe04f13
-		using this as 
-		k: 00542d46e7b3daac8aeb81e533873aabd6d74bb710
-	*/		
-		mpz_set_str(m, "0x00542d46e7b3daac8aeb81e533873aabd6d74bb710", 0);
-		
-	} else {
-	/*
-		Curve domain parameters:
-		p:	dfd7e09d5092e7a5d24fd2fec423f7012430ae9d
-		a:	dfd7e09d5092e7a5d24fd2fec423f7012430ae9a
-		b:	01914dc5f39d6da3b1fa841fdc891674fa439bd4
-		N:	00dfd7e09d5092e7a5d25167ecfcfde992ebf8ecad
-	*/
-		mpz_set_str(EC.p, "0xdfd7e09d5092e7a5d24fd2fec423f7012430ae9d", 0);
-		mpz_set_str(EC.a, "0xdfd7e09d5092e7a5d24fd2fec423f7012430ae9a", 0);
-		mpz_set_str(EC.b, "0x01914dc5f39d6da3b1fa841fdc891674fa439bd4", 0);
-	/*
-		Base point:
-		Gx:	70ee7b94f7d52ed6b1a1d3201e2d85d3b82a9810
-		Gy:	0b23823cd6dc3df20979373e5662f7083f6aa56f
-	*/
-		mpz_set_str(P.x, "0x70ee7b94f7d52ed6b1a1d3201e2d85d3b82a9810", 0);
-		mpz_set_str(P.y, "0x0b23823cd6dc3df20979373e5662f7083f6aa56f", 0);
-	/*
-		known verified R point for second curve
-		R.x	5432bddd1f97418147aff016eaa6100834f2caa8
-		R.y	c498b88965689ee44df349b066cd43cbf4f2c5d0
-		problem is found discrete logaritm, unknown k
-		so just set the same...
-	*/
-		mpz_set_str(m, "0x00542d46e7b3daac8aeb81e533873aabd6d74bb710", 0);
-	}
-	
-	/*	p = k x G == R = m x P	*/
+	//Elliptic Curve Diffie–Hellman Key Exchange (ECDH)
+    //Public parameters: {p = 17, a = 2, b = 2, P = (5,1)}
+    //Alice's private key = 4
+    //Bob's private key = 7
+    
+    //Alice computes k_pubA = private_key_Alice * P
+    Scalar_Multiplication(P, &k_pubA, private_key_Alice);
+    
+    //Bob computes k_pubB = private_key_Bob * P
+    Scalar_Multiplication(P, &k_pubB, private_key_Bob);
+
+    //Alice and Bob exchange k_pubA and k_pubB
+    //Alice computes joint secret key
+    Scalar_Multiplication(k_pubB, &joint_key_Alice, private_key_Alice);
+
+    //Bob computes joint secret key
+    Scalar_Multiplication(k_pubA, &joint_key_Bob, private_key_Bob);
+
+    //Verify joint keys are equal
+    if(mpz_cmp(joint_key_Alice.x, joint_key_Bob.x) == 0 && mpz_cmp(joint_key_Alice.y, joint_key_Alice.y) == 0){
+
+        printf("Keys are equal\n");
+    }
+
+    /*	p = k x G == R = m x P	*/
 	//Implemented as adding P to itself m times and storing result in R
-    Scalar_Multiplication(P, &R, m);
+    //Scalar_Multiplication(P, &R, m);
 	
-	mpz_out_str(stdout, 16, R.x); puts("");
-	mpz_out_str(stdout, 16, R.y); puts("");
+	//mpz_out_str(stdout, 16, R.x); puts("");
+	//mpz_out_str(stdout, 16, R.y); puts("");
 
 	// Free variables
 	mpz_clear(EC.a); mpz_clear(EC.b); mpz_clear(EC.p);
-	mpz_clear(R.x); mpz_clear(R.y);
+	//mpz_clear(R.x); mpz_clear(R.y);
 	mpz_clear(P.x); mpz_clear(P.y);
-	mpz_clear(m);
+	//mpz_clear(m);
 }
