@@ -1,11 +1,14 @@
-#include <pbc.h>
-#include <pbc_test.h>
+#include "pbc.h"
+#include "pbc_test.h"
 #include <vector>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <utility.h>
-#include <cmath.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <iostream>
+#include <string>
+#include "gmpxx.h"
+#include "gmp.h"
 
 #define NUM_USERS 5
 
@@ -25,8 +28,10 @@ struct User
 void compute_points(std::vector<int> polynomial, User u){
     
     long tmp_id = mpz_get_si(u.id); 
+    mpz_t p;
+    mpz_init(p);
 
-    for(long i = 2; i < polynomial::size; i++){
+    for(long i = 2; i < polynomial.size(); i++){
         
         long tmp = 0;
 
@@ -36,8 +41,8 @@ void compute_points(std::vector<int> polynomial, User u){
 
         }
         
-        mpz_set_si(u.second, tmp);
-        u.points.push_back(u.second);
+        mpz_set_si(p, tmp);
+        u.points.push_back(p);
 
     }
 }
@@ -54,9 +59,9 @@ void lagrange_coe(int i, int n, User u){
         
         if(i != j){
             
-            mpf_set_si(u.lagrange, ret);
-            mpf_set_si(m_tmp_i, i);
-            mpf_set_si(m_tmp_j, j);
+            mpf_set_ui(u.lagrange, ret);
+            mpf_set_ui(m_tmp_i, i);
+            mpf_set_ui(m_tmp_j, j);
 
             //ret = ret * (-j / (i - j))
             mpf_sub_ui(m_tmp_i, m_tmp_i, m_tmp_j);
@@ -116,7 +121,7 @@ int main() {
         mpz_set_si(user_vec[i].input, i);
         
         //Assign each user set of points
-        compute_points(polynomial, user_vec[i])
+        compute_points(polynomial, user_vec[i]);
         
         lagrange_coe(i, NUM_USERS, user_vec[i]);
 
@@ -130,7 +135,7 @@ int main() {
     mpz_t time;
     mpz_init(time);
     element_from_hash(hm, "time", strlen("time"));
-    element_to_mpz(time, hm)
+    element_to_mpz(time, hm);
 
     for(int i = 1; i <= NUM_USERS; i++){
 
@@ -138,7 +143,7 @@ int main() {
         element_mul_mpz(pk, g1, user_vec[i-1].input);
         mpz_mul(user_vec[i-1].lagrange, user_vec[i-1].lagrange, user_vec[i-1].points[NUM_USERS-1]);
         element_mul_mpz(pk, pk, user_vec[i-1].lagrange);
-        element_mul_mpz(pk, pk, user_vec[i-1].time);
+        element_mul_mpz(pk, pk, time);
         element_add(user_vec[i-1].ciphertext, pk, user_vec[i-1].lagrange);
 
     }
@@ -151,6 +156,24 @@ int main() {
 
 
     //DLS
+    
+    mpz_t s, r;
+    mpz_init(s);
+    mpz_set_si (r, 1);
+
+    while(1){
+
+        element_mul_mpz(pk, g1, s);
+        if(element_cmp(pk, user_vec[NUM_USERS-1].ciphertext) == 0){
+            printf("Decryption Successful");
+            break;
+        }
+        else{
+
+            mpz_add(s, s, r);
+
+        }
+    }
 
     return 0;
 }
