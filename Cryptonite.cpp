@@ -1,4 +1,4 @@
-
+// g++ Cryptonite.cpp -o driver -lpbc -lgmp -lgmpxx -I/usr/local/include/pbc
 #include <vector>
 #include <cstdio>
 #include <cstdlib>
@@ -13,6 +13,9 @@
 
 #include "pbc.h"
 #include "pbc_test.h"
+
+using std::cout;
+using std::endl;
 
 #define NUM_USERS 5
 
@@ -172,7 +175,7 @@ int main() {
         //pk = g * x
         element_mul_mpz(pk, g1, user_vec[i].input.get_mpz_t());
         
-        user_vec[i].lagrange *= user_vec[i].points[NUM_USERS-1];
+        user_vec[i].lagrange *= user_vec[i].points[NUM_USERS-2-1];
         //mpz_mul(user_vec[i-1].lagrange, user_vec[i-1].lagrange, user_vec[i-1].points[NUM_USERS-1]);
         
         element_set_mpz(tmp_lagrange, user_vec[i].lagrange.get_mpz_t());
@@ -191,18 +194,25 @@ int main() {
 
     //DLS
     //TODO move to C++, if convenient
-    mpz_t ss, r;
-    mpz_init(ss);
-    mpz_set_si (r, 1);
-    while(1){
-        element_mul_mpz(pk, g1, ss);
-        if(element_cmp(pk, user_vec[NUM_USERS-1].ciphertext) == 0){
-            printf("Decryption Successful");
-            break;
+    mpz_class ss, r;
+    r = 1;
+    ss = 0;
+    int result;
+    mpz_class i;
+    for(i = 0; i < prime; i++){
+      element_mul_mpz(pk, g1, ss.get_mpz_t());
+        result = element_cmp(pk, user_vec[NUM_USERS-1].ciphertext);
+        if(result){
+            ss += r;
         }
         else{
-            mpz_add(ss, ss, r);
+            cout << "Decryption Successful" << endl;
+            break;
         }
+    }
+    if(result){
+      cout << "DECRYPTION FAILED, " << (++i).get_mpz_t() << " iterations" << endl;
+      return 1;
     }
 
     return 0;
