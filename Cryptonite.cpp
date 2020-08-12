@@ -18,10 +18,7 @@ using std::cout;
 using std::endl;
 
 #define NUM_USERS 5
-
-static std::vector<int> polynomial;
-static mpz_class prime;
-
+#define PRIME_REPS 20
 
 struct User
 {
@@ -34,17 +31,14 @@ struct User
 
 void compute_points(const std::vector<int> & polynomial, User & u){
     assert(u.points.empty());
-    mpz_class tmp_id; // = u.id; 
-    //mpz_class p;
+    mpz_class tmp_id;
     for(long i = 2; i < polynomial.size(); i++){
         mpz_class tmp = 0;
         for(long j = 2; j <= i; j++){ 
             tmp_id = u.id;
-            //Do we have enough precision?
-            mpz_pow_ui(tmp_id.get_mpz_t(), tmp_id.get_mpz_t(), j); // std::pow(tmp_id, j);
+            mpz_pow_ui(tmp_id.get_mpz_t(), tmp_id.get_mpz_t(), j);
             tmp += tmp_id;
         }
-        //p = tmp;
         u.points.push_back(tmp);
     }
     return;
@@ -69,54 +63,29 @@ void lagrange_coe(const int i, const int n, User & u, const mpz_class & p){
   return;
 }
 
-
-/*
-void lagrange_coe(int i, int n, User u){
-    
-    double ret = 1;
-    
-
-    mpf_t m_tmp_i, m_tmp_j;
-    mpf_init(m_tmp_i);
-    mpf_init(m_tmp_j);
-
-    for(double j = 1; j <= n; j++){
-        
-        if(i != j){
-            
-            mpf_set_ui(u.lagrange, ret);
-            mpf_set_ui(m_tmp_i, i);
-            mpf_set_ui(m_tmp_j, j);
-
-            //ret = ret * (-j / (i - j))
-            mpf_sub_ui(m_tmp_i, m_tmp_i, m_tmp_j);
-            mpf_invert(m_tmp_i, m_tmp_i, prime);
-            mpf_mul(m_tmp_j, m_tmp_j, m_tmp_i);
-            mpf_mul(u.lagrange, m_tmp_j, m_tmp_j);
-            mpf_mod(u.lagrange, u.lagrange, prime);
-            
-        }
-
-        ret = mpf_get_si(u.lagrange);
-
-    }
-
-}
-*/
     
 
 int main() {
+
+    assert(NUM_USERS >= 3);
  
+    mpz_class prime;
+    std::vector<int> polynomial;
     //r is prime
     prime = "730750818665451621361119245571504901405976559617";
+    assert(mpz_probab_prime_p(prime.get_mpz_t(), PRIME_REPS));
 
      char s[3000] = "type a\nq 8780710799663312522437781984754049815806883199414208211028653399266475630880222957078625179422662221423155858769582317459277713367317481324925129998224791\nh 12016012264891146079388821366740534204802954401251311822919615131047207289359704531102844802183906537786776\nr 730750818665451621361119245571504901405976559617\nexp2 159\nexp1 107\nsign1 1\nsign0 1\n";
 
      pairing_t pairing;
      element_t x,pk,g1,h,hm,sigma;
 
-     if (pairing_init_set_buf(pairing,s,strlen(s))) pbc_die("Pairing initialization failed.");
-     if (!pairing_is_symmetric(pairing)) pbc_die("pairing must be symmetric");
+     if (pairing_init_set_buf(pairing,s,strlen(s))){
+        pbc_die("Pairing initialization failed.");
+     } 
+     if (!pairing_is_symmetric(pairing)){
+        pbc_die("pairing must be symmetric");
+     } 
 
 
     element_init_Zr(x, pairing);
@@ -143,14 +112,6 @@ int main() {
         user_vec[i].id = i;
         user_vec[i].points.clear();
         element_init_G1(user_vec[i].ciphertext, pairing);
-        //user_vec.push_back(User());
-        //mpz_init(user_vec[i-1].id);
-        //mpz_init(user_vec[i-1].input);
-        //mpz_init(user_vec[i-1].points[0]);
-        //mpf_init(user_vec[i-1].lagrange);
-        //user_vec[i-1].id = i;
-        //mpz_set_si(user_vec[i].id, i);
-        //mpz_set_si(user_vec[i].input, i);
         
         //Assign each user set of points
         compute_points(polynomial, user_vec[i]);
@@ -176,7 +137,6 @@ int main() {
         element_mul_mpz(pk, g1, user_vec[i].input.get_mpz_t());
         
         user_vec[i].lagrange *= user_vec[i].points[NUM_USERS-2-1];
-        //mpz_mul(user_vec[i-1].lagrange, user_vec[i-1].lagrange, user_vec[i-1].points[NUM_USERS-1]);
         
         element_set_mpz(tmp_lagrange, user_vec[i].lagrange.get_mpz_t());
         
@@ -193,7 +153,6 @@ int main() {
 
 
     //DLS
-    //TODO move to C++, if convenient
     mpz_class ss, r;
     r = 1;
     ss = 0;
