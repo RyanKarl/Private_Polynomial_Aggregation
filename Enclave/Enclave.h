@@ -4,19 +4,18 @@
 #ifndef ENCLAVE_H
 #define ENCLAVE_H
 
+#include <gmp.h>
+
+#include "Enclave_defines.h"
+
 #if defined(__cplusplus)
-#include <vector>
-#include <utility>
+# include <vector>
+# include <utility>
+# include <gmpxx.h>
 using std::vector;
 using std::pair;
 extern "C" {
 #endif
-
-mpz_class aggregate(const vector<pair<mpz_class> > & ciphertexts, const Parameters & parms){
-	mpz_class ret;
-
-	return ret;
-}
 
 int enclave_aggregate(const void ** ctext_buffers, const size_t num_ctexts, void * out_buf, size_t out_size);
 

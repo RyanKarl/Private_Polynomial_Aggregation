@@ -1,10 +1,8 @@
 //App.cpp
 //Jonathan S. Takeshita, Ryan Karl, Mark Horeni
 //Compile without SGX as:
-//g++ App/App.cpp Enclave/Enclave.cpp -pedantic -Wall  -O3 -o ./app -lm -DNENCLAVE
+// g++ App/App.cpp Enclave/Enclave.cpp -pedantic -Wall  -O3 -o ./app -lm -DNENCLAVE -lgmp -lgmpxx
 //Example run commands:
-//./app -s Master_Arch.txt -c mnist_train.csv -i caster.dat -o enclave_out.dat -v -v -v -b
-//./app -s Master_Arch.txt -c fc1.txt -i dummy_gpu.dat -o enclave_out.dat -v -v
 //Defined first to go before other standard libs
 /*
 #define malloc_consolidate(){\
@@ -24,11 +22,16 @@ malloc_consolidate();\
 #include <string.h>
 #include <errno.h>
 #include <getopt.h>
+#include <chrono>
+#include <utility>
 
 #include <iostream>
 
-using std::cout;
-using std::endl;
+using namespace std;
+using namespace std::chrono;
+using duration_t = std::chrono::high_resolution_clock::time_point;
+
+#include "Aggregation.h"
 
 #ifndef NENCLAVE
 
@@ -237,54 +240,25 @@ int main(int argc, char ** argv){
 #define SEED 10
   srand(SEED);
 
-  //i and o are filenames of named pipe
-  char * input_pipe_path = NULL;
-  char * output_pipe_path = NULL;
-  char * network_structure_fname = NULL;
-  char * input_csv_filename = NULL;
-  char * weights_outfile = NULL;
-  int verbose = 0;
-  int backprop = 0;
-  //int debug = 0;
+  unsigned int num_iterations = 0;
+  unsigned int num_parties = 0;
+  unsigned int security_level = 0;
 
-  //Jon TODO take in arguments
   char c;
-  while((c = getopt(argc, argv, "s:c:i:o:vw:bg")) != -1){
+  while((c = getopt(argc, argv, "i:p:t:")) != -1){
     switch(c){
-      case 'v':{
-        verbose += 1;
-        break;
-      }
-      case 's':{
-        network_structure_fname = optarg;
-        break;
-      }
       case 'i':{
-        input_pipe_path = optarg;
+        num_iterations = atoi(optarg);
         break;
       }
-      case 'o':{
-        output_pipe_path = optarg;
-        break;  
-      }
-      case 'c':{
-        input_csv_filename = optarg;
+      case 'p':{
+        num_parties = atoi(optarg);
         break;
       }
-      case 'w':{
-        weights_outfile = optarg;
+      case 't':{
+        security_level = atoi(optarg);
         break;
       }
-      case 'b':{
-        backprop = 1;
-        break;
-      }
-/*
-      case 'g':{
-        debug = 1;
-        break;
-      }
-*/
       default:{
         fprintf(stderr, "ERROR: unrecognized argument %c\n", c);
         return 0;
@@ -292,8 +266,18 @@ int main(int argc, char ** argv){
     }
   }
   
-  if(verbose >= 2){
-    cout << "Args parsed" << endl;
+  //Check args
+  if(!num_iterations){
+    cout << "Iterations not properly specified" << endl;
+    return 0;
+  }
+  if(num_parties < 2){
+    cout << "Number of parties not properly specified" << endl;
+    return 0;
+  }
+  if(!security_level){
+    cout << "Security level not properly specified" << endl;
+    return 0;
   }
   
 #ifndef NENCLAVE  
@@ -308,23 +292,34 @@ int main(int argc, char ** argv){
   }
 #endif  
 
-#ifdef NENCLAVE
-  int enclave_result = enclave_main(network_structure_fname, input_csv_filename, input_pipe_path, output_pipe_path, weights_outfile, backprop, verbose);
-  
-#else
-  int enclave_result;
-  sgx_enclave_id_t eid = global_eid;
-  sgx_status_t sgx_enclave_stat = enclave_main(eid, &enclave_result,
-    network_structure_fname, input_csv_filename, input_pipe_path, output_pipe_path, weights_outfile, backprop, verbose); 
-#endif  
 
-  if(verbose >= 2){
-    cout << "Enclave returned " << enclave_result << endl;
+  
+  //duration_t encode_start, encode_end;
+  duration_t aggregate_start, aggregate_end;
+  Parameters parms = setup(security_level);
+  
+  vector<vector<mpz_class > > keys = keygen(parms);
+  vector<mpz_class> inputs(num_parties); //TODO initialize inputs - should these be chosen anew at each iteration?
+  vector<std::pair<mpz_class, mpz_class> > encodings(num_parties);
+  mpz_class result;
+  for(unsigned int i = 0; i < num_iterations; i++){
+    for(unsigned int j = 0; j < num_parties; j++){
+      duration_t encode_start, encode_end;
+      encode_start = high_resolution_clock::now();
+      encodings[j] = encode(inputs[j], keys[j], parms);
+      encode_end = high_resolution_clock::now();
+      double enc_duration = duration_cast<chrono::nanoseconds>(encode_end-encode_start).count();
+      cout << "encode " << enc_duration << '\n';
+    } 
+    duration_t agg_start, agg_end;
+    agg_start = high_resolution_clock::now();
+    result = aggregate(encodings, parms);
+    agg_end = high_resolution_clock::now();
+    double agg_duration = duration_cast<chrono::nanoseconds>(agg_end-agg_start).count();
+    cout << "aggregate " << agg_duration << '\n';
   }
   
-  if(verbose >= 1){
-    print_timings(std::cout);
-  }  
+ 
   
   /* Destroy the enclave */
 #ifndef NENCLAVE  
@@ -333,6 +328,6 @@ int main(int argc, char ** argv){
   
   
   
-  return enclave_result;
+  return 0;
 
 }
