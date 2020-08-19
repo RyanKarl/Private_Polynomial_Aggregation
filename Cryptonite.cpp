@@ -45,7 +45,7 @@ void compute_points(const std::vector<int> & polynomial, User & u){
 }
 
 void lagrange_coe(const int i, const int n, User & u, const mpz_class & p){
-  u.lagrange = 1.0f;
+  u.lagrange = 1;
   mpz_class tmp;
   for(int j = 1; j <= n; j++){ 
       if(i != j){
@@ -155,7 +155,7 @@ int main() {
     //DLS
     mpz_class ss, r;
     r = 1;
-    ss = 0;
+    ss = 0; //Do we need this?
     int result;
     mpz_class i;
     for(i = 0; i < prime; i++){
