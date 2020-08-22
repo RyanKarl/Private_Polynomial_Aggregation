@@ -4,7 +4,7 @@
 #include <gmp.h>
 #include "gmpxx.h"
 #define NUM_BITS 100
-
+#define CHOICE 1
 
 void gen_rand_bits(mpz_class len, mpz_class & bitstring){
     std::string temp;
@@ -78,7 +78,23 @@ int main(){
     mpz_and(b_1, r_1, gamma_1);
     mpz_set_str(b_1, std::to_str(mpz_popcount(b_1)), 10); 
 
-    
+    mpz_mpz_powm(alpha_0, g, y_0, NIOT_prime);
+    mpz_mpz_powm(alpha_1, g, y_1, NIOT_prime);
+
+    //STEP 4
+    mpz_class plaintext;
+    if (rand_i == 0){
+        mpz_mpz_powm(plaintext, alpha_0, x_i, NIOT_prime);
+        mpz_and(plaintext, r_0, plaintext);
+        mpz_set_str(plaintext, std::to_str(mpz_popcount(plaintext)), 10);
+    }
+    else{
+        mpz_mpz_powm(plaintext, alpha_1, x_i, NIOT_prime);
+        mpz_and(plaintext, r_1, plaintext);
+        mpz_set_str(plaintext, std::to_str(mpz_popcount(plaintext)), 10);
+    }
+
+    std::cout << std::to_string(plaintext);
 
     return 0;    
 
