@@ -4,6 +4,8 @@ static struct Point result;
 # define CHAR_BIT 8
 #endif
 
+//TODO init ecall
+
 size_t size_in_bytes(const mpz_t * arg){
   size_t size_base2 = mpz_sizeinbase(*arg, 2);
   size_t numb = sizeof(char)*CHAR_BIT; //Need to modify this on a system with nails
@@ -20,6 +22,41 @@ void write_out(const Point * p, char ** buf_x, size_t * size_x,
   write_out(&(p->x), buf_x, size_x);
   write_out(&(p->y), buf_y, size_y);  
   return;       
+}
+
+//Untrusted stubs to make ecalls
+void point_double(const Point & p){
+  size_t res_x, res_y;
+  char * p_x;
+  char * p_y;
+  size_t x_size, y_size;
+  write_out(&p, &p_x, &x_size, &p_y, &y_size);
+  call_doubling(p_x, x_size, p_y, y_size, &x_size, &y_size);
+}
+
+void point_add(const Point & p, const Point & q){
+  size_t res_x, res_y;
+  char * p_x;
+  char * p_y;
+  size_t p_x_size, p_y_size;
+  char * q_x;
+  char * q_y;
+  size_t q_x_size, q_y_size;
+  write_out(&p, &p_x, &p_x_size, &p_y, &p_y_size);
+  write_out(&q, &q_x, &q_x_size, &q_y, &q_y_size);
+  call_add(p_x, p_x_size, p_y, p_y_size, q_x, q_x_size, q_y, q_y_size);
+}
+
+void point_mult(const Point & p, const mpz_t & m){
+  size_t res_x, res_y;
+  char * p_x;
+  char * p_y;
+  size_t x_size, y_size;
+  write_out(&p, &p_x, &x_size, &p_y, &y_size);
+  char * m_buf;
+  size_t m_size;
+  write_out(&m, &m_buf, &m_size);
+  call_mult(p_x, x_size, p_y, y_size, m_buf, m_size);
 }
 
 void call_doubling(const char * p_x, const size_t p_x_size, 
