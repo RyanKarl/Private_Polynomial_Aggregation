@@ -1,0 +1,33 @@
+
+enclave {
+
+	trusted {
+		include "sgx_tgmp.h"
+
+		public void tgmp_init();
+
+		public size_t e_mpz_add(
+			[string, in] char *str_a, [string, in] char *str_b
+		);
+
+		public size_t e_mpz_mul(
+			[string, in] char *str_a, [string, in] char *str_b
+		);
+
+		public size_t e_mpz_div(
+			[string, in] char *str_a, [string, in] char *str_b
+		);
+
+		public size_t e_mpf_div(
+			[string, in] char *str_a, [string, in] char *str_b, int digits
+		);
+
+		public int e_get_result(
+			[user_check] char *str_c, size_t len
+		);
+
+		public size_t e_pi (uint64_t digits);
+	};
+
+};
+
