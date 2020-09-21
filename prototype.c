@@ -7,11 +7,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <gmp.h>
-#include <time.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
 
 
 #define SIZE 1000
@@ -204,6 +199,9 @@ void search(int key, mpz_t m) {
    //get the hash
    int hashIndex = hashCode(key);
    char int_to_hex[1024];
+   mpz_t tmp1, tmp2;
+   mpz_init(tmp1);
+   mpz_init(tmp2);
    //move in array until an empty
    while(hashArray[hashIndex] != NULL) {
 
@@ -216,10 +214,12 @@ void search(int key, mpz_t m) {
 			int hash = HASH;
 			//mpz_set_str(m, int_to_hex, 0);
 			mpz_set_str(m, "0x0", 0);
-			sprintf(int_to_hex, "0x%x", hash);
-                	mpz_add(m, m, int_to_hex);
-                	sprintf(int_to_hex, "0x%x", *(rand_list + key));
-                	mpz_add(m, m, int_to_hex);
+			//sprintf(int_to_hex, "0x%x", hash);
+                	mpz_set_si(tmp1, hash);
+			mpz_add(m, m, tmp1);
+			mpz_set_si(tmp2, *(rand_list + key));
+                	//sprintf(int_to_hex, "0x%x", *(rand_list + key));
+                	mpz_add(m, m, tmp2);
                 	Scalar_Multiplication(hashArray[hashIndex]->data, &hashArray[hashIndex]->data, m);
 			
 			return;
@@ -305,7 +305,7 @@ const char* getfield(char* line, int num)
     return NULL;
 }
 
-int main(int argc, char** argv)
+int main(int argc, char *argv[])
 {	
 
 	mpz_init(EC.a);
@@ -330,10 +330,12 @@ int main(int argc, char** argv)
         mpz_set_str(P.x, "0x010aff82b3ac72569ae645af3b527be133442131", 0);
         mpz_set_str(P.y, "0x46b8ec1e6d71e5ecb549614887d57a287df573cc", 0);
         //mpz_set_str(m, "0x00542d46e7b3daac8aeb81e533873aabd6d74bb710", 0);
+	
+	int users = atoi(argv[1]);
+	int faults = atoi(argv[2]);
 
-	int users = (int) argv[1];
-	int faults = (int) argv[2];
-
+	//printf("%i\n", users);
+	//printf("%i\n", faults);
 
 	//for (int i = 0; i < array_size; i++) {
     	//	mpz_init2(num_arr[i], 1024);
@@ -356,17 +358,25 @@ int main(int argc, char** argv)
 	int   plaintext = 0, hash = HASH, counter = 0;
 	char line[1024], int_to_hex[users];
 
+	mpz_t t1;
+	mpz_init(t1);
+
         while (fgets(line, 1024, stream) && counter < (users)){
                 char* tmp = strdup(line);
                 //printf("Field 3 would be %d\n", (int) getfield(tmp, 3) % 6 );
                 
-		plaintext = (int) getfield(tmp, 3) % 7;
-		sprintf(int_to_hex, "0x%x", plaintext);
-		mpz_set_str(m, int_to_hex, 0);
-		sprintf(int_to_hex, "0x%x", hash);
-		mpz_add(m, m, int_to_hex);
-		sprintf(int_to_hex, "0x%x", *(rand_list + counter));
-		mpz_add(m, m, int_to_hex);
+		plaintext = atoi(getfield(tmp, 3)) % 7;
+		//sprintf(int_to_hex, "0x%x", plaintext);
+		mpz_set_si(m, plaintext);
+		//sprintf(int_to_hex, "0x%x", hash);
+		mpz_set_si(t1, hash);
+                mpz_add(m, m, t1);
+                mpz_set_si(t1, *(rand_list + counter));
+
+		mpz_add(m, m, t1);
+		//sprintf(int_to_hex, "0x%x", *(rand_list + counter));
+		
+		mpz_add(m, m, t1);
 		Scalar_Multiplication(P, &R, m);
 		
 		if (counter > faults){
